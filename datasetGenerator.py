@@ -80,8 +80,15 @@ measuredVelocities = idealValues_Matrix[1] + velocityNoise
 measuredPositions[0] = initialPosition
 measuredVelocities[0] = initialVelocity
 
-print(measuredPositions)
-print(measuredVelocities)
+observedValues = np.empty([idealValues_Matrix.shape[1], 2]);
+
+for i in range (0, idealValues_Matrix.shape[1]):
+    observedValues[i, 0] = measuredPositions[i]
+    observedValues[i, 1] = measuredVelocities[i]
+
+
+# print(measuredPositions)
+# print(measuredVelocities)
 
 
 
