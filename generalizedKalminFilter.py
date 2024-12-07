@@ -149,7 +149,7 @@ def getPredStateMatrix(deltaT, acceleration, initialMeasurementArray, A, B, erro
 
     # X_k-1
     previousState_Matrix = initialMeasurementArray
-    print('i', previousState_Matrix)
+
     # B
     B_Matrix = B
 
@@ -161,15 +161,14 @@ def getPredStateMatrix(deltaT, acceleration, initialMeasurementArray, A, B, erro
         
     # A * X_k-1
     formattedState_Matrix = np.dot(A_Matrix, previousState_Matrix)
-    print('a', A_Matrix)
-    print('s', formattedState_Matrix)
+    
 
     # B * mu_k
     formattedControlVariable_Matrix = np.dot(B_Matrix, controlVariable_Matrix)
-    print('b', formattedControlVariable_Matrix)
+    
     # Adds the above two matricies
     predictedStateMatrix = np.add(formattedState_Matrix, formattedControlVariable_Matrix)
-    print('p:',predictedStateMatrix)
+    
     # w_k
     if (error_Matrix != -1):
         return np.add(predictedStateMatrix, error_Matrix)
