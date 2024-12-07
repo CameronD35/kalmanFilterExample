@@ -94,7 +94,7 @@ def generateVelocities(initialVelocity, acceleration, iter, axisNumber):
     
     # make sure we are counting the iteration number
     iter += 1
-
+    print
     # RECURSION!!!!!!
     return generateVelocities(finalVelocity, acceleration, iter, axisNumber)
 
@@ -104,6 +104,8 @@ generatePositions(initialPosition, initialVelocity, acceleration, 1, 2)
 generateVelocities(initialVelocity, acceleration, 1, 0)
 generateVelocities(initialVelocity, acceleration, 1, 1)
 generateVelocities(initialVelocity, acceleration, 1, 2)
+
+print('test:', values_Matrix)
 
 #print(idealValues_Matrix)
 #print(idealValues_Matrix.shape[1])

@@ -14,19 +14,19 @@ proErr = np.array([[proPosErr], [proPosErr], [proPosErr], [proVelErr], [proVelEr
 
 def createKalmanFilter(deltaT, acceleration, dimensions, dataset, observationErrArray, processErrArray):
 
+    # Sets the A matrix based on the dimensions we are working in (dimensions variable)
     A = np.zeros([dimensions, dimensions])
 
     for i in range(0, dimensions):
         A[i, i] = 1
 
-        if(i < A.shape[0] - 2):
-            A[i, i+2] = deltaT
+        if(i < A.shape[0] - 3):
+            A[i, i+3] = deltaT
 
-
+    # The width of B is half the dimensions since the control variable (in kinematiacs it is acceleration) only affects the axes present (x, y, z)
     B_width = int(dimensions/2)
     B = np.zeros([dimensions, B_width])
 
-    #print(B)
 
     for i in range(0, dimensions):
 
@@ -35,19 +35,15 @@ def createKalmanFilter(deltaT, acceleration, dimensions, dataset, observationErr
         else:
             B[i, i - (B_width)] = deltaT
 
-    #print(B)
 
-
+    # The H matrix is an identity matrix in this case of n dimensions where n equal to the dimensions variable
     H = np.zeros([dimensions, dimensions])
 
     for i in range(0, dimensions):
 
         H[i, i] = 1
 
-    # print(A)
-    # print(B)
-    # print(H)
-
+    # takes the first measurement in the dataset and converts it to a n by 1 matrix
     initialMeasurement = np.zeros([dimensions, 1])
 
     for i in range(0, dimensions):
@@ -55,14 +51,14 @@ def createKalmanFilter(deltaT, acceleration, dimensions, dataset, observationErr
 
     # print(initialMeasurement)
 
-
+    # takes the second measurement in the dataset and converts it to a n by 1 matrix
     secondMeasurement = np.zeros([dimensions, 1])
 
     for i in range(0, dimensions):
         secondMeasurement[i, 0] = dataset[1][i]
 
-    # print(secondMeasurement)
 
+    
 
     generalizedKalman(deltaT, acceleration, initialMeasurement, secondMeasurement, processErrArray, observationErrArray, dataset, -1, A, B, H, 1)
 
@@ -70,7 +66,7 @@ def createKalmanFilter(deltaT, acceleration, dimensions, dataset, observationErr
 
 def generalizedKalman(deltaT, acceleration, initialMeasurementArray, secondMeasurementArray, processErrArray, observationErrArray, dataset, prevProcessCVMatrix, A, B, H, iter):
 
-    
+    #print(dataset)
     #print(len(dataset))
 
     # A
@@ -103,10 +99,8 @@ def generalizedKalman(deltaT, acceleration, initialMeasurementArray, secondMeasu
 
     # Y_k
     newObservation = getNewObservation(secondMeasurementArray, -1, H)
-
     # X_k
     filteredState = calculateFilteredState(kalminGain, predictedStateMatrix, newObservation, H_Matrix)
-    #print(filteredState)
 
     # P_k
     updatedProcessCovarianceMatrix = updateProcessCVMatrix(kalminGain, H_Matrix, predictedProcessCovarianceMatrix)
@@ -116,128 +110,66 @@ def generalizedKalman(deltaT, acceleration, initialMeasurementArray, secondMeasu
     print(f'Iteration #: {iter}\nThe predicted x-position is: {filteredState[0, 0]}.\nThe predicted x-velocity is: {filteredState[3, 0]}\nThe new process covariance matrix is:\n{updatedProcessCovarianceMatrix}\n\n')
 
     # Removes the very first item from the dataset tuple to set up for recursion
-    #print(dataset)
     slicedDataset = dataset[1:len(dataset)]
-    #print(slicedDataset)
+    
 
     # Base case: Since the dataset would not have an index of 1 (see that index 0 and 1 are necessary for the filter), the function is exited 
     if (len(slicedDataset) <= 1):
         print('Kalmin filter finished')
         return
     
-    initialMeasurement = np.zeros([filteredState.shape[0], 1])
-    #print(initialMeasurement, 'hi')
+    # The below code sets up the new measurements by setting the previous current to previous and the next point to current
+    previousMeasurement = np.zeros([filteredState.shape[0], 1])
 
-    for i in range(0, filteredState.shape[0]):
-        initialMeasurement[i, 0] = filteredState[i, 0]
-
-    #print(initialMeasurement)
 
     for i in range(0, A_Matrix.shape[0]):
-        initialMeasurement[i, 0] = slicedDataset[0][i]
-
-    #print(initialMeasurement)
-    # print(initialMeasurement)
+        previousMeasurement[i, 0] = slicedDataset[0][i]
 
 
-    secondMeasurement = np.zeros([A_Matrix.shape[0], 1])
+    currentMeasurement = np.zeros([A_Matrix.shape[0], 1])
 
     for i in range(0, A_Matrix.shape[0]):
-        secondMeasurement[i, 0] = slicedDataset[1][i]
-    #print(secondMeasurement)
+        currentMeasurement[i, 0] = slicedDataset[1][i]
+    
     iter += 1
 
     # RECURSION!
-    return generalizedKalman(deltaT, acceleration, initialMeasurement, secondMeasurement, processErrArray, observationErrArray, slicedDataset, updatedProcessCovarianceMatrix, A, B, H, iter)
-
-# def kinematicsKalman(deltaT, acceleration, measuredPosition, measuredVelocity, processPositionError, processVelocityError, observationPositonError,
-#                      observationVelocityError, secondMeasuredPosition, secondMeasuredVelocity, dataset, prevProcessCVMatrix, A, B, H):
-
-    
-#     #print(len(dataset))
-
-#     # A
-#     A_Matrix = A
-
-#     # B
-#     B_Matrix = B
-
-#     # H
-#     H_Matrix = H
-
-#     # X_kp
-#     predictedStateMatrix = getPredStateMatrix(deltaT, acceleration, measuredPosition, measuredVelocity, A_Matrix, B_Matrix, -1)
-
-#     # P_k-1
-#     processCovarianceMatrix = 0
-
-#     # If we already have a previous process covariance matrix, we should not create an initial one
-#     if (type(prevProcessCVMatrix) is int):
-#         processCovarianceMatrix = getInitProcessCVMatrix(processPositionError, processVelocityError)
-#     else:
-#         #print(prevProcessCVMatrix)
-#         processCovarianceMatrix = prevProcessCVMatrix
-
-#     # P_kp
-#     predictedProcessCovarianceMatrix = getPredProcessCVMatrix(processCovarianceMatrix, A_Matrix, -1)
-
-#     # K
-#     kalminGain = getKalmanGain(predictedProcessCovarianceMatrix, observationPositonError, observationVelocityError, H_Matrix)
-
-#     # Y_k
-#     newObservation = getNewObservation(secondMeasuredPosition, secondMeasuredVelocity, -1)
-
-#     # X_k
-#     filteredState = calculateFilteredState(kalminGain, predictedStateMatrix, newObservation, H_Matrix)
-
-#     # P_k
-#     updatedProcessCovarianceMatrix = updateProcessCVMatrix(kalminGain, H_Matrix, predictedProcessCovarianceMatrix)
-
-#     #print(updatedProcessCovarianceMatrix)
-
-#     print(f'The predicted position is: {filteredState[0, 0]}.\nThe predicted velocity is: {filteredState[1, 0]}\nThe new process covariance matrix is:\n{updatedProcessCovarianceMatrix}')
-
-#     # Removes the very first item from the dataset tuple to set up for recursion
-#     slicedDataset = dataset[1:len(dataset)]
-#     #print(slicedDataset)
-
-#     # Base case: Since the dataset would not have an index of 1 (see that index 0 and 1 are necessary for the filter), the function is exited 
-#     if (len(slicedDataset) <= 1):
-#         print('Kalmin filter finished')
-#         return
-    
-#     # RECURSION!
-#     return kinematicsKalman(deltaT, acceleration, filteredState[0, 0], filteredState[1, 0], 20, 5, 25, 6, slicedDataset[1][0], slicedDataset[1][1], slicedDataset, updatedProcessCovarianceMatrix, A_Matrix, B_Matrix, H_Matrix)
+    return generalizedKalman(deltaT, acceleration, previousMeasurement, currentMeasurement, processErrArray, observationErrArray, slicedDataset, updatedProcessCovarianceMatrix, A, B, H, iter)
 
 
 # Predicted State Matrix
 def getPredStateMatrix(deltaT, acceleration, initialMeasurementArray, A, B, error_Matrix):
-    #print('getting predicted state matrix')
     
     # A
     A_Matrix = A
 
     #print(A_Matrix)
 
+    # Its adding indecies 0 and 2 for some reason?
+
     # X_k-1
     previousState_Matrix = initialMeasurementArray
-
+    print('i', previousState_Matrix)
     # B
     B_Matrix = B
 
     # mu_k
     controlVariable_Matrix = np.zeros([B_Matrix.shape[1], 1])
-    
+
+    for i in range(0, B_Matrix.shape[1]):
+        controlVariable_Matrix[i, 0] = acceleration
+        
     # A * X_k-1
     formattedState_Matrix = np.dot(A_Matrix, previousState_Matrix)
-    #print(formattedStateMatrix)
+    print('a', A_Matrix)
+    print('s', formattedState_Matrix)
 
     # B * mu_k
     formattedControlVariable_Matrix = np.dot(B_Matrix, controlVariable_Matrix)
-
+    print('b', formattedControlVariable_Matrix)
     # Adds the above two matricies
     predictedStateMatrix = np.add(formattedState_Matrix, formattedControlVariable_Matrix)
-
+    print('p:',predictedStateMatrix)
     # w_k
     if (error_Matrix != -1):
         return np.add(predictedStateMatrix, error_Matrix)
@@ -329,6 +261,7 @@ def getPredProcessCVMatrix(initProcessCVMatrix, A, Q):
 
         return firstTerm
 
+# Calculates the kalman gain
 def getKalmanGain(predProcessCVMatrix, observationErrorArray, H):
     
     # H
@@ -374,7 +307,7 @@ def getKalmanGain(predProcessCVMatrix, observationErrorArray, H):
 
     return kalminGain
 
-
+# gets the next observation
 def getNewObservation(secondObservationArray, error_Matrix, H):
     
     # C
@@ -392,23 +325,20 @@ def getNewObservation(secondObservationArray, error_Matrix, H):
     else:
         return reformattedY_Matrix
 
-
+# Calculates the kalmanized state to filter out noise
 def calculateFilteredState(kalminGain, predState_Matrix, observation_Matrix, H):
-    
     # H * X_kp
     modifiedPredState_Matrix = np.dot(H, predState_Matrix)
-
     # Y_k - (H * X_kp)
     predObsDifference_Matrix = np.subtract(observation_Matrix, modifiedPredState_Matrix)
-
     # Multiply above matrix by kalmin gain (K * Above Matrix)
     kalminized = np.dot(kalminGain, predObsDifference_Matrix)
-
     # Added the 'kalminized' (Idk if that's a word) matrix to the original predicted state matrix
     finalCalculatedState = np.add(kalminized, predState_Matrix)
 
     return(finalCalculatedState)
 
+# updates the covariance matrix for the next iteration
 def updateProcessCVMatrix(kalminGain, H_Matrix, predProcessCV_Matrix):
 
     kalminGainHeight = kalminGain.shape[0]
@@ -433,9 +363,5 @@ def updateProcessCVMatrix(kalminGain, H_Matrix, predProcessCV_Matrix):
 
 # (Position, Velocity)
 dataset = DG.values_Matrix
-#print(dataset)
-#print(dataset)
-# kinematicsKalman(1, 2, dataset[0][0], dataset[0][1], 20, 5, 25, 6, dataset[1][0], dataset[1][1], dataset, -1)
 
 createKalmanFilter(1, 2, 6, dataset, obsErr, proErr)
-# print(dataset)
